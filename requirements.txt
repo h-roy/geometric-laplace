@@ -1,0 +1,19 @@
+black
+isort
+flake8
+python-dotenv
+debugpy
+pytest
+jax[cuda11_cudnn82] #jax[cpu]
+tree-math
+matfree
+optax
+matplotlib
+numpy
+jupyterlab
+flax
+gitpython
+opencv-python
+scikit-learn
+lmdb
+seaborn
