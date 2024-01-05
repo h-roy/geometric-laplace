@@ -1,0 +1,57 @@
+
+Usage:
+ watch [options] command
+
+Options:
+  -b, --beep             beep if command has a non-zero exit
+  -c, --color            interpret ANSI color and style sequences
+  -d, --differences[=<permanent>]
+                         highlight changes between updates
+  -e, --errexit          exit if command has a non-zero exit
+  -g, --chgexit          exit when output from command changes
+  -n, --interval <secs>  seconds to wait between updates
+  -p, --precise          attempt run command in precise intervals
+  -t, --no-title         turn off header
+  -x, --exec             pass command to exec instead of "sh -c"
+
+ -h, --help     display this help and exit
+ -v, --version  output version information and exit
+
+For more details see watch(1).
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 19362112: <NONAME> in cluster <dcc> Exited
+
+Job <NONAME> was submitted from host <hpclogin2> by user <hroy> in cluster <dcc> at Fri Nov 17 06:06:06 2023
+Job was executed on host(s) <n-62-31-23>, in queue <hpc>, as user <hroy> in cluster <dcc> at Fri Nov 17 06:06:06 2023
+</zhome/51/4/177032> was used as the home directory.
+</work3/hroy/geometric-laplace> was used as the working directory.
+Started at Fri Nov 17 06:06:06 2023
+Terminated at Fri Nov 17 06:06:07 2023
+Results reported at Fri Nov 17 06:06:07 2023
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+watch
+------------------------------------------------------------
+
+Exited with exit code 1.
+
+Resource usage summary:
+
+    CPU time :                                   0.31 sec.
+    Max Memory :                                 -
+    Average Memory :                             -
+    Total Requested Memory :                     1024.00 MB
+    Delta Memory :                               -
+    Max Swap :                                   -
+    Max Processes :                              -
+    Max Threads :                                -
+    Run time :                                   1 sec.
+    Turnaround time :                            1 sec.
+
+The output (if any) is above this job summary.
+
