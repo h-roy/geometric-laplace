@@ -1,0 +1,80 @@
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+NonKernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+Kernel Path finished
+cpu
+
+------------------------------------------------------------
+Sender: LSF System <lsfadmin@hpc.dtu.dk>
+Subject: Job 19890462: <run_diffusion> in cluster <dcc> Done
+
+Job <run_diffusion> was submitted from host <hpclogin2> by user <hroy> in cluster <dcc> at Fri Jan 12 11:58:11 2024
+Job was executed on host(s) <4*n-62-20-5>, in queue <gpuv100>, as user <hroy> in cluster <dcc> at Fri Jan 12 13:20:25 2024
+</zhome/51/4/177032> was used as the home directory.
+</work3/hroy/geometric-laplace> was used as the working directory.
+Started at Fri Jan 12 13:20:25 2024
+Terminated at Fri Jan 12 13:20:49 2024
+Results reported at Fri Jan 12 13:20:49 2024
+
+Your job looked like:
+
+------------------------------------------------------------
+# LSBATCH: User input
+#!/bin/bash
+#BSUB -q gpuv100
+#BSUB -J run_diffusion
+#BSUB -n 4
+#BSUB -gpu "num=1"
+#BSUB -W 4:00
+#BSUB -R "rusage[mem=8GB]"
+#BSUB -R "select[gpu16gb]"
+#BSUB -R "span[hosts=1]"
+#BSUB -o /work3/hroy/geometric-laplace/logs/jobscript_test_0.out
+#BSUB -e /work3/hroy/geometric-laplace/logs/jobscript_test_0.err
+module load python3/3.9.11 cuda/11.4 cudnn/v8.6.0.163-prod-cuda-11.X
+module swap cudnn/v8.6.0.163-prod-cuda-11.X
+source geom/bin/activate
+export CUDA_VISIBLE_DEVICES=0,1
+export XLA_PYTHON_CLIENT_PREALLOCATE=false
+python3 experiments/sine_curve.py
+------------------------------------------------------------
+
+Successfully completed.
+
+Resource usage summary:
+
+    CPU time :                                   14.49 sec.
+    Max Memory :                                 235 MB
+    Average Memory :                             235.00 MB
+    Total Requested Memory :                     32768.00 MB
+    Delta Memory :                               32533.00 MB
+    Max Swap :                                   -
+    Max Processes :                              4
+    Max Threads :                                14
+    Run time :                                   24 sec.
+    Turnaround time :                            4958 sec.
+
+The output (if any) is above this job summary.
+
+
+
+PS:
+
+Read file </work3/hroy/geometric-laplace/logs/jobscript_test_0.err> for stderr output of this job.
+

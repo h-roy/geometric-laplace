@@ -12,14 +12,10 @@ from jax import random, jit
 import pickle
 from src.models.fc import FC_NN
 from src.helper import compute_num_params
+from src.losses import mse_loss
 
 def f(x):
     return jnp.sin(5 * x + 1) #+ jnp.cos(25 * x + 1) + jnp.exp(0.1 * x) + 5
-
-
-def loss_fn(preds, y):
-    residual = preds - y
-    return jnp.sum(residual**2)
 
 
 if __name__ == "__main__":
@@ -27,7 +23,7 @@ if __name__ == "__main__":
     parser.add_argument("--input_dims", type=int, default=1)
     parser.add_argument("--output_dim", type=int, default=1)
     parser.add_argument("--n_batches", type=int, default=20)
-    parser.add_argument("--N", type=int, default=2000)
+    parser.add_argument("--N", type=int, default=50)
     args = parser.parse_args()
     print(args)
     model_key, data_key, noise_key, split_key = random.split(random.PRNGKey(42), 4)
@@ -47,7 +43,7 @@ if __name__ == "__main__":
     y_train = f(x_train) + random.normal(noise_key, (N, input_dim)) * noise_std
     y_train = y_train[:, :output_dim]
 
-    model = FC_NN(output_dim, 16, 2)
+    model = FC_NN(output_dim, 10, 2)
     params = model.init(model_key, x_train[:B])
     D = compute_num_params(params)
     print(f"Number of parameters: {D}")
@@ -57,11 +53,10 @@ if __name__ == "__main__":
         O = y.shape[-1]
         out = model.apply(params, x)
         vparams = tm.Vector(params)
-
         log_likelihood = (
             -N * O / 2 * jnp.log(2 * jnp.pi)
             + N * O / 2 * log_rho
-            - (N / B) * 0.5 * rho * jnp.sum(jax.vmap(loss_fn)(out, y))  # Sum over the observations
+            - (N / B) * 0.5 * rho * jnp.sum(jax.vmap(mse_loss)(out, y))  # Sum over the observations
         )
         log_prior = -D / 2 * jnp.log(2 * jnp.pi) + D / 2 * log_alpha - 0.5 * alpha * vparams @ vparams
         loss = log_likelihood + log_prior
@@ -85,7 +80,6 @@ if __name__ == "__main__":
     log_likelihoods = []
     log_priors = []
     mean_loss = []
-    mse_loss = []
     mse_preds = []
     # Training with Marginal Likelihood loss
     print("Starting training...")
@@ -113,7 +107,15 @@ if __name__ == "__main__":
         )
 
     # Save Learned parameters
+    train_stats_dict = {}
+    train_stats_dict['x_train'] = x_train
+    train_stats_dict['y_train'] = y_train
+    train_stats_dict['x_val'] = x_val
+    train_stats_dict['y_val'] = f(x_val)
+    train_stats_dict['model'] = model
+    train_stats_dict['n_params'] = D
+
     with open(f"./checkpoints/syntetic_regression.pickle", "wb") as file:
         pickle.dump(
-            {"args": args, "params": params, "alpha": alpha, "rho": rho}, file
+            {"args": args, "params": params, "alpha": alpha, "rho": rho, "train_stats": train_stats_dict}, file
         )

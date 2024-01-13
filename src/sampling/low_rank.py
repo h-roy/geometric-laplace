@@ -6,6 +6,7 @@ from matfree.backend import func, linalg, np
 from typing import Callable, Literal, Optional
 
 
+#@jax.jit
 def lanczos_tridiag(
         Av: Callable,
         v0: jax.Array,
