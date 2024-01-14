@@ -13,6 +13,7 @@ import jax
 from jax import flatten_util
 import matplotlib.pyplot as plt
 from jax.lib import xla_bridge
+from src.sampling.lanczos_diffusion import lanczos_diffusion
 
 
 
@@ -25,54 +26,21 @@ if __name__ == "__main__":
     alpha = param_dict['alpha']
     rho = param_dict['rho']
     x_train, y_train, x_val, y_val, model, D = param_dict["train_stats"]['x_train'],param_dict["train_stats"]['y_train'],param_dict["train_stats"]['x_val'],param_dict["train_stats"]['y_val'],param_dict["train_stats"]['model'], param_dict["train_stats"]['n_params']
-    _model_fn = lambda params, x: model.apply(params, x[None, ...])[0]
-    # ggn = calculate_exact_ggn(mse_loss, _model_fn, params, x_train, y_train, D)
     sample_key = jax.random.PRNGKey(0)
-    n_steps = 10
+    n_steps = 1000
     n_samples = 50
     alpha = 10.0
     rank = 7
-    eps = jax.random.normal(sample_key, (n_samples, n_steps, rank))
-    p0_flat, unravel_func_p = jax.flatten_util.ravel_pytree(params)
-    # rank = 100
-    # alpha = 0.1
-    @jax.jit
-    def rw_nonker(single_eps_path):
-        params_ = p0_flat
-        posterior_list = [params]
-        for i in range(n_steps):
-            ggn = calculate_exact_ggn(mse_loss, _model_fn, unravel_func_p(params_), x_train, y_train, D)
-            _, eigvecs = jnp.linalg.eigh(ggn)
-            # lr_sample = eigvecs[:,-rank:] @ jnp.diag(1/jnp.sqrt(eigvals[-rank:]+ alpha)) @ single_eps_path[i]
-            lr_sample = 1/jnp.sqrt(alpha) * eigvecs[:,-rank:] @ single_eps_path[i]
-            params_ = params_ + 1/jnp.sqrt(n_steps) * lr_sample
-            posterior_list.append(unravel_func_p(params_))
-            print("NonKernel Path finished")
-        return posterior_list
-        # return unravel_func_p(params_)
-    nonker_posterior_samples = jax.vmap(rw_nonker)(eps)[-1]
+    nonker_posterior_samples = lanczos_diffusion(mse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "non-kernel-eigvals")
+    
 
-    n_steps = 10
+    n_steps = 1000
     n_samples = 50
-    rank = 100#200
+    rank = 10#200
     alpha = 10.0
-    eps = jax.random.normal(sample_key, (n_samples, n_steps, D - rank))
-    p0_flat, unravel_func_p = jax.flatten_util.ravel_pytree(params)
-    @jax.jit
-    def rw_ker(single_eps_path):
-        params_ = p0_flat
-        posterior_list = [params]
-        for i in range(n_steps):
-            ggn = calculate_exact_ggn(mse_loss, _model_fn, unravel_func_p(params_), x_train, y_train, D)
-            _, eigvecs = jnp.linalg.eigh(ggn)
-            lr_sample = 1/jnp.sqrt(alpha) * eigvecs[:,:-rank] @ single_eps_path[i]
-            params_ = params_ + 1/jnp.sqrt(n_steps) * lr_sample
-            posterior_list.append(unravel_func_p(params_))
-            print("Kernel Path finished")
-        return posterior_list
-    ker_posterior_samples = jax.vmap(rw_ker)(eps)[-1]
+    ker_posterior_samples = lanczos_diffusion(mse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "kernel")
 
-    x_val = x_train
+    # x_val = x_train
     ker_predictive = sample_predictive(ker_posterior_samples, params, model, x_val, False, "Pytree")
     nonker_predictive = sample_predictive(nonker_posterior_samples, params, model, x_val, False, "Pytree")
     ker_posterior_predictive_mean = jnp.mean(ker_predictive, axis=0).squeeze()
@@ -90,9 +58,6 @@ if __name__ == "__main__":
     nonker_samples_sorted = nonker_predictive[:, idx, :].squeeze()
     ker_std_sorted = ker_posterior_predictive_std[idx]
     nonker_std_sorted = nonker_posterior_predictive_std[idx]
-
-    print(xla_bridge.get_backend().platform)
-
 
     #Plots
     # Plot 1: Mean and Std of Sampled Predictive

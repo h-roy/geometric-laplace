@@ -5,7 +5,7 @@ import torch
 from jax import random
 import json
 import datetime
-from src.losses import cross_entropy_loss
+from src.losses import cross_entropy_loss, accuracy, accuracy_preds
 from src.helper import calculate_exact_ggn, compute_num_params
 from src.sampling.predictive_samplers import sample_predictive, sample_hessian_predictive
 from jax import numpy as jnp
@@ -14,7 +14,9 @@ from jax import flatten_util
 import matplotlib.pyplot as plt
 from jax.lib import xla_bridge
 from src.data.torch_datasets import MNIST, numpy_collate_fn
-from src.models.convnet import ConvNet
+from src.sampling.exact_ggn import exact_ggn_laplace
+from src.sampling.lanczos_diffusion import lanczos_diffusion
+
 
 
 if __name__ == "__main__":
@@ -51,34 +53,52 @@ if __name__ == "__main__":
     y_val = jnp.array(data["label"])
 
     sample_key = jax.random.PRNGKey(0)
-    n_posterior_samples = 200
+    n_posterior_samples = 500
     n_sample_batch_size = 1
     n_sample_batches = N // n_sample_batch_size
 
 
-    # Create GGN
-    _model_fn = lambda params, x: model.apply(params, x[None, ...])[0]
-    ggn = calculate_exact_ggn(cross_entropy_loss, _model_fn, params, x_train, y_train, n_params)
-    eigvals, eigvecs = jnp.linalg.eigh(ggn)
-    alpha = 1.0
-    rank = 100
+    # laplace
+    # model_fn = lambda params, x: model.apply(params, x[None, ...])[0]
+    # rank = 10
+    # var = 0.5
+    # jit_exact_ggn_laplace = jax.jit(exact_ggn_laplace, static_argnames=("loss", "model_fn", "n_params", "n_posterior_samples", "rank", "posterior_type"), backend='cpu')
+    # lr_posterior_samples, posterior_samples, isotropic_posterior_samples = jit_exact_ggn_laplace(cross_entropy_loss, 
+    #                                                                                          model_fn,
+    #                                                                                          params,
+    #                                                                                          x_train,
+    #                                                                                          y_train,
+    #                                                                                          n_params,
+    #                                                                                          rank,
+    #                                                                                          alpha,
+    #                                                                                          n_posterior_samples,
+    #                                                                                          sample_key,
+    #                                                                                          var,
+    #                                                                                          "all"
+    #                                                                                          )
+    # predictive_lr = sample_predictive(lr_posterior_samples, params, model, x_val, False, "Pytree")
+    # predictive = sample_predictive(posterior_samples, params, model, x_val, False, "Pytree")
+    # predictive_isotropic = sample_predictive(isotropic_posterior_samples, params, model, x_val, False, "Pytree")
+    # print("MAP accuracy:", accuracy(params, model, x_val, y_val)/x_val.shape[0])
+    # accuracies = jax.vmap(accuracy_preds, in_axes=(0,None))(predictive_lr, y_val)
+    # accuracies /= x_val.shape[0]
+    # print("lr:",jnp.mean(accuracies))
+    # accuracies = jax.vmap(accuracy_preds, in_axes=(0,None))(predictive, y_val)
+    # accuracies /= x_val.shape[0]
+    # print("full:", jnp.mean(accuracies))
+    # accuracies = jax.vmap(accuracy_preds, in_axes=(0,None))(predictive_isotropic, y_val)
+    # accuracies /= x_val.shape[0]
+    # print("isotropic:", jnp.mean(accuracies))
 
-    def ggn_lr_vp(v):
-        return eigvecs[:,-rank:] @ jnp.diag(1/jnp.sqrt(eigvals[-rank:]+ alpha)) @ v
-
-    def ggn_vp(v):
-        return eigvecs @ jnp.diag(1/jnp.sqrt(eigvals + alpha)) @ v
-    n_posterior_samples = 20
-    D = compute_num_params(params)
-    sample_key = jax.random.PRNGKey(0)
-    eps = jax.random.normal(sample_key, (n_posterior_samples, D))
-    p0_flat, unravel_func_p = flatten_util.ravel_pytree(params)
-    var = 0.1
-    def get_posteriors(single_eps):
-        lr_sample = unravel_func_p(ggn_lr_vp(single_eps[:rank]) + p0_flat)
-        posterior_sample = unravel_func_p(ggn_vp(single_eps) + p0_flat)
-        isotropic_sample = unravel_func_p(var * single_eps + p0_flat)
-        return lr_sample, posterior_sample, isotropic_sample
-    lr_posterior_samples, posterior_samples, isotropic_posterior_samples = jax.vmap(get_posteriors)(eps)
+    n_steps = 20
+    n_samples = 50
+    alpha = 10.0
+    rank = 50
+    nonker_posterior_samples = lanczos_diffusion(cross_entropy_loss, model.apply, params,n_steps,n_samples,alpha,sample_key,n_params,rank,x_train,y_train,1.0,"non-kernel-eigvals")
+    predictive_lr = sample_predictive(nonker_posterior_samples, params, model, x_val, False, "Pytree")
+    print("MAP accuracy:", accuracy(params, model, x_val, y_val)/x_val.shape[0])
+    accuracies = jax.vmap(accuracy_preds, in_axes=(0,None))(predictive_lr, y_val)
+    accuracies /= x_val.shape[0]
+    print("lr:",jnp.mean(accuracies))
 
     breakpoint()
