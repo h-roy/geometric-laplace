@@ -22,4 +22,7 @@ def accuracy(params, model, batch_x, batch_y):
 def accuracy_preds(preds, batch_y):
     return jnp.sum(preds.argmax(axis=-1) == batch_y.argmax(axis=-1))
 
+def nll(preds, y):
+    preds = jax.nn.log_softmax(preds, axis=-1)
+    return (-jnp.sum(jnp.sum(preds * y, axis=-1), axis=-1)).mean()
 

@@ -34,9 +34,10 @@ if __name__ == "__main__":
     # Initialize prior and likelihood precision
 
     x_train = random.uniform(data_key, (N, input_dim), minval=0, maxval=1)
+    # x_train = jnp.concatenate([jnp.linspace(0, 0.02, 12), jnp.linspace(0.4, 0.42, 25), jnp.linspace(0.8, 0.82, 13)]).reshape(-1, 1)
     x_val = jnp.linspace(-1, 2, 100).reshape(-1, 1)
     B = int(N / n_batches)
-    noise_std = 0.05
+    noise_std = 0.01
     rho = 1 / noise_std**2
     alpha = 10.
     log_alpha, log_rho = jnp.log(alpha), jnp.log(rho)
