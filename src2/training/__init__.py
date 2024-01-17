@@ -1,0 +1,1 @@
+from training.training import maximum_a_posteriori
