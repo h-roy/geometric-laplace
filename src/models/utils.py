@@ -2,7 +2,7 @@ import pickle
 import json
 import jax
 from jax import flatten_util
-from models import MLP, LeNet
+from src.models import MLP, LeNet
 
 def load_model(
         dataset = "MNIST",

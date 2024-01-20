@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision as tv
 from torchvision.transforms.functional import normalize
 import numpy as np
-from datasets.utils import select_classes, select_num_samples
+from src.data.utils import select_classes, select_num_samples
 
 def channel_normalization(tensor, mean, std, move_channel = True):
     if move_channel:
@@ -17,7 +17,7 @@ def channel_normalization(tensor, mean, std, move_channel = True):
 class SVHN(torch.utils.data.Dataset):
     def __init__(
         self, 
-        path_root="../datasets", 
+        path_root="/work3/hroy/data/", 
         train: bool = True,
         transform=None, 
         n_samples_per_class: int = None, 

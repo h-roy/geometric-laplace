@@ -1,14 +1,13 @@
 import jax
 from jax import numpy as jnp
-from src.helper import get_gvp_fun
+from src.helper import get_gvp_fun, get_ggn_vector_product
 from src.sampling import lanczos_tridiag
 from typing import Literal
 from functools import partial
 
 
-@partial(jax.jit, static_argnames=("loss", "model_fn", "n_steps", "n_params", "n_samples", "rank", "diffusion_type"))
-def lanczos_diffusion(loss, 
-                      model_fn,
+@partial(jax.jit, static_argnames=("model", "n_steps", "n_params", "n_samples", "rank", "diffusion_type", "likelihood"))
+def lanczos_diffusion(model,
                       params,
                       n_steps,
                       n_samples,
@@ -17,7 +16,7 @@ def lanczos_diffusion(loss,
                       n_params,
                       rank,
                       x_train,
-                      y_train,
+                      likelihood: Literal["classification", "regression"] = "classification",
                       delta = 1.0,
                       diffusion_type: Literal["kernel", "non-kernel", "non-kernel-eigvals", "full-ggn"] = "kernel"          
                       ):
@@ -30,7 +29,8 @@ def lanczos_diffusion(loss,
     def diffusion(single_eps_path):
         params_ = p0_flat
         def body_fun(n, res):
-            gvp = get_gvp_fun(model_fn, loss, unravel_func_p(res), x_train, y_train)
+            # gvp = get_gvp_fun(model_fn, loss, unravel_func_p(res), x_train, y_train)
+            gvp = get_ggn_vector_product(unravel_func_p(res), model, x_train, None, likelihood)
             if diffusion_type == "kernel":
                 gvp_ = lambda v: gvp(v) + delta * v
                 eigvals, eigvecs = lanczos_tridiag(gvp_, v0, rank - 1)

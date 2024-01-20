@@ -5,8 +5,8 @@ import torch
 import optax
 import time
 
-from training.loss import log_posterior_loss
-from training.utils import get_accuracy, compute_num_params
+from src.losses import log_posterior_loss, accuracy
+from src.helper import compute_num_params
 
 def maximum_a_posteriori(
     model: flax.linen.Module,
@@ -62,7 +62,7 @@ def maximum_a_posteriori(
     for epoch in range(1, args_dict["n_epochs"] + 1):
         log_posterior = 0.
         log_likelihood, log_prior = 0., 0.
-        accuracy = 0.
+        accuracy_stat = 0.
         n_batches = 0
         start_time = time.time()
         for batch in train_loader:
@@ -81,26 +81,26 @@ def maximum_a_posteriori(
             log_likelihood += loss_dict["log_likelihood"].item()
             log_prior += loss_dict["log_prior"].item()
             if likelihood_type=="classification":
-                accuracy += get_accuracy(params, model, X, Y).item()
+                accuracy_stat += accuracy(params, model, X, Y).item()
     
-        accuracy /= N
+        accuracy_stat /= N
         log_likelihood /= N
         log_prior /= n_batches
         log_posterior /= n_batches
         if likelihood_type=="classification":
-            print(f"epoch={epoch} averages - log likelihood={log_likelihood:.3f}, log prior={log_prior:.2f}, loss={-log_posterior:.2f}, accuracy={accuracy:.2f}, time={time.time() - start_time:.3f}s")
+            print(f"epoch={epoch} averages - log likelihood={log_likelihood:.3f}, log prior={log_prior:.2f}, loss={-log_posterior:.2f}, accuracy={accuracy_stat:.2f}, time={time.time() - start_time:.3f}s")
         elif likelihood_type=="regression":
             print(f"epoch={epoch} averages - log likelihood={log_likelihood:.3f}, log prior={log_prior:.2f}, loss={-log_posterior:.2f}, time={time.time() - start_time:.3f}s")
         epoch_log_posterior.append(log_posterior)
         epoch_log_likelihood.append(log_likelihood)
         epoch_log_prior.append(log_prior)
-        epoch_accuracy.append(accuracy)
+        epoch_accuracy.append(accuracy_stat)
 
         if epoch % args_dict["test_every_n_epoch"] != 0 and epoch != args_dict["n_epochs"]:
             continue
 
         def get_precise_stats(loader):
-            accuracy, mse = 0., 0.
+            accuracy_stat, mse = 0., 0.
             log_likelihood, log_prior = 0., 0.
             start_time = time.time()
             for batch in loader:
@@ -108,7 +108,7 @@ def maximum_a_posteriori(
                 Y = jnp.array(batch[1].numpy())
                 B = X.shape[0]
                 if likelihood_type=="classification":
-                    accuracy += get_accuracy(params, model, X, Y).item()
+                    accuracy_stat += accuracy(params, model, X, Y).item()
                 _, loss_dict = log_posterior_loss(
                     params,
                     alpha,
@@ -124,7 +124,7 @@ def maximum_a_posteriori(
                 log_likelihood += loss_dict["log_likelihood"].item()
                 log_prior = loss_dict["log_prior"].item()
                 mse += loss_dict["sum_squared_error"].item()
-            accuracy /= len(loader.dataset)
+            accuracy_stat /= len(loader.dataset)
             mse /= len(loader.dataset)
             log_posterior = log_likelihood + log_prior  # posterior per dataset
             log_likelihood /= len(loader.dataset)       # likelihood per datapoint
@@ -132,7 +132,7 @@ def maximum_a_posteriori(
                 "log_likelihood": log_likelihood, 
                 "log_prior": log_prior, 
                 "log_posterior": log_posterior, 
-                "accuracy": accuracy, 
+                "accuracy": accuracy_stat, 
                 "mse": mse,
                 "time": time.time() - start_time}
             return stats_dict

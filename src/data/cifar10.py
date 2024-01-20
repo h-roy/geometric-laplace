@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import torchvision as tv
 from torchvision.transforms.functional import normalize
 import numpy as np
-from datasets.utils import select_classes, select_num_samples
+from src.data.utils import select_classes, select_num_samples
 
 def channel_normalization(tensor, mean, std, move_channel = True):
     if move_channel:
@@ -14,23 +14,23 @@ def channel_normalization(tensor, mean, std, move_channel = True):
     tensor = normalize(tensor, mean, std)
     return tensor
 
-class CIFAR100(torch.utils.data.Dataset):
+class CIFAR10(torch.utils.data.Dataset):
     def __init__(
         self, 
-        path_root="../datasets", 
+        path_root="/work3/hroy/data/", 
         train: bool = True, 
         transform=None, 
         n_samples_per_class: int = None, 
-        cls: list = list(range(100)), 
+        cls: list = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 
         download=True,
         seed: int = 0
     ):
         self.path = Path(path_root)
         if train:
-            self.dataset = tv.datasets.CIFAR100(root=self.path, train=True, download=download)
+            self.dataset = tv.datasets.CIFAR10(root=self.path, train=True, download=download)
             self.dataset.targets = np.array(self.dataset.targets)
         else:
-            self.dataset = tv.datasets.CIFAR100(root=self.path, train=False, download=download)
+            self.dataset = tv.datasets.CIFAR10(root=self.path, train=False, download=download)
             self.dataset.targets = np.array(self.dataset.targets)
         self.transfrm = transform
         

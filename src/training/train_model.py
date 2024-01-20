@@ -5,16 +5,16 @@ import json
 import datetime
 import jax
 
-from datasets import MNIST, FashionMNIST, SVHN, CIFAR10, CIFAR100, get_dataloader, n_classes
-from models import MLP, LeNet
-from training import maximum_a_posteriori
+from src.data import MNIST, FashionMNIST, SVHN, CIFAR10, CIFAR100, get_dataloader, n_classes
+from src.models import MLP, LeNet
+from src.training.maximum_a_posteriori import maximum_a_posteriori
 
 
 
 parser = argparse.ArgumentParser()
 # dataset hyperparams
 parser.add_argument("--dataset", type=str, choices=["MNIST", "FMNIST", "SVHN", "CIFAR-10", "CIFAR-100"], default="MNIST")
-parser.add_argument("--data_path", type=str, default="../../datasets/", help="root of dataset")
+parser.add_argument("--data_path", type=str, default="/work3/hroy/data/", help="root of dataset")
 parser.add_argument("--n_samples", default=None, type=int, help="Number of datapoint to use. None means all")
 parser.add_argument("--train_val_ratio", type=float, default=0.9)
 
@@ -36,7 +36,7 @@ parser.add_argument("--likelihood", type=str, choices=["regression", "classifica
 parser.add_argument("--test_every_n_epoch", type=int, default=1e10)
 # storage
 parser.add_argument("--run_name", default=None, help="Fix the save file name.")
-parser.add_argument("--model_save_path", type=str, default="../../models", help="Root where to save models")
+parser.add_argument("--model_save_path", type=str, default="./checkpoints/", help="Root where to save models")
 
 
 

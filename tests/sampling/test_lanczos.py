@@ -3,20 +3,20 @@ import jax.numpy as jnp
 import time
 import matplotlib.pyplot as plt
 
-from datasets import MNIST, FashionMNIST, SVHN, CIFAR10, CIFAR100, n_classes
-from models import load_model
-from autodiff import get_ggn_vector_product
-from lanczos import full_reorth_lanczos
-
+from src.data import MNIST, FashionMNIST, SVHN, CIFAR10, CIFAR100, n_classes
+from src.models.utils import load_model
+from src.helper import get_gvp_fun, get_ggn_vector_product
+from src.sampling import lanczos_tridiag
+from src.losses import cross_entropy_loss
 
 dataset_name = "CIFAR-10"
 
 model_name = "LeNet"
 run_name = "example"
-model_save_path = "../../models"
-dataset_save_path = "../../datasets"
+model_save_path = "./checkpoints/"
+dataset_save_path = "/work3/hroy/data/"
 
-lanczos_iter = 1000
+lanczos_iter = 100
 
 
 
@@ -55,22 +55,53 @@ num_params = vectorize_fun(params).shape[0]
 
 ##########################
 ### GGN vector product ###
-ggn_vector_product = get_ggn_vector_product(
-        params,
-        model,
-        data_array = data_array,
-        likelihood_type = "classification"
-)
+# x_train = data_array[:100]
+# y_train = jnp.array([data[1] for data in dataset])[:100]
+# ggn_vector_product_1 = get_gvp_fun(
+#         model.apply,
+#         cross_entropy_loss,
+#         params,
+#         x_train,
+#         y_train
+# )
+# random_vector = jax.random.normal(jax.random.PRNGKey(0), shape=(num_params, ))
+
+# start = time.time()
+# ggn_vector_product_1(random_vector)
+# print(f"\nOne GGN vector product (with {len(data_array)} datapoints) took {time.time()-start:.5f} seconds")
+
+# print("...Let's try again to exploit compilation...")
+# random_vector = jax.random.normal(jax.random.PRNGKey(1), shape=(num_params, ))
+# start = time.time()
+# ggn_vector_product_1(random_vector)
+# print(f"One GGN vector product (with {len(data_array)} datapoints) took {time.time()-start:.5f} seconds")
+
+
+
+###############
+### Lanczos ###
+# start = time.time()
+# eigenval_1, eigenvec = lanczos_tridiag(ggn_vector_product_1, random_vector, lanczos_iter)
+# print(f"{lanczos_iter} iterations of Lanczos took {time.time()-start:.3f} seconds")
+
+#### Other GGN vector product
+ggn_vector_product_2 = get_ggn_vector_product(
+                                                params,
+                                                model,
+                                                data_array = data_array,
+                                                likelihood_type = "classification"
+                                        )
+
 random_vector = jax.random.normal(jax.random.PRNGKey(0), shape=(num_params, ))
 
 start = time.time()
-ggn_vector_product(random_vector)
+ggn_vector_product_2(random_vector)
 print(f"\nOne GGN vector product (with {len(data_array)} datapoints) took {time.time()-start:.5f} seconds")
 
 print("...Let's try again to exploit compilation...")
 random_vector = jax.random.normal(jax.random.PRNGKey(1), shape=(num_params, ))
 start = time.time()
-ggn_vector_product(random_vector)
+ggn_vector_product_2(random_vector)
 print(f"One GGN vector product (with {len(data_array)} datapoints) took {time.time()-start:.5f} seconds")
 
 
@@ -78,10 +109,10 @@ print(f"One GGN vector product (with {len(data_array)} datapoints) took {time.ti
 ###############
 ### Lanczos ###
 start = time.time()
-eigenvec, eigenval = full_reorth_lanczos(jax.random.PRNGKey(0), ggn_vector_product, num_params, lanczos_iter)
+eigenval_2, eigenvec = lanczos_tridiag(ggn_vector_product_2, random_vector, lanczos_iter)
 print(f"{lanczos_iter} iterations of Lanczos took {time.time()-start:.3f} seconds")
 
-
-plt.plot(eigenval)
+# plt.plot(eigenval_1)
+plt.plot(eigenval_2)
 plt.yscale("log")
 plt.savefig(f"eigenvalues_{dataset_name}_{model_name}")

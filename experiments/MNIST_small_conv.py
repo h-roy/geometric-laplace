@@ -16,7 +16,7 @@ from jax.lib import xla_bridge
 from src.data.torch_datasets import MNIST, numpy_collate_fn
 from src.sampling.exact_ggn import exact_ggn_laplace
 from src.sampling.lanczos_diffusion import lanczos_diffusion
-
+import time
 
 
 if __name__ == "__main__":
@@ -93,12 +93,14 @@ if __name__ == "__main__":
     n_steps = 20
     n_samples = 50
     alpha = 10.0
-    rank = 50
+    rank = 300
+    start_time = time.time()
     nonker_posterior_samples = lanczos_diffusion(cross_entropy_loss, model.apply, params,n_steps,n_samples,alpha,sample_key,n_params,rank,x_train,y_train,1.0,"non-kernel-eigvals")
     predictive_lr = sample_predictive(nonker_posterior_samples, params, model, x_val, False, "Pytree")
     print("MAP accuracy:", accuracy(params, model, x_val, y_val)/x_val.shape[0])
     accuracies = jax.vmap(accuracy_preds, in_axes=(0,None))(predictive_lr, y_val)
     accuracies /= x_val.shape[0]
     print("lr:",jnp.mean(accuracies))
+    print("Time:", time.time() - start_time)
 
     breakpoint()
