@@ -8,6 +8,7 @@ from src.losses import cross_entropy_loss, gaussian_log_lik_loss
 import flax
 import torch
 
+
 def get_ggn_tree_product(
         params,
         model: flax.linen.Module,
@@ -100,36 +101,93 @@ def get_ggn_vector_product(
     else:
         return ggn_vector_product
 
-# @partial(jax.jit, static_argnames=("model_fn", "loss_fn"))
-def get_gvp_fun(
-    model_fn: Callable,
-    loss_fn: Callable,
-    params,
-    x,
-    y
+# @partial(jax.jit, static_argnames=("model", "likelihood_type"))
+def get_gvp_fun(params,
+                model: flax.linen.Module,
+                data_array: jax.Array,
+                batch_size = -1,
+                likelihood_type: str = "regression",
+                sum_type: Literal["running", "parallel"] = "running",
   ) -> Callable:
+  if sum_type == "running":
+    def gvp(eps):
+        def scan_fun(carry, batch):
+            x_ = batch
+            if batch_size>0:
+                model_on_data = lambda p: model.apply(p,x_)
+            else:
+                model_on_data = lambda p: model.apply(p,x_[None,:])
+            # Linearise and use transpose
+            _, J_tree = jax.jvp(model_on_data, (params,), (eps,))
+            pred, model_on_data_vjp = jax.vjp(model_on_data, params)
+            if likelihood_type == "regression":
+                HJ_tree = J_tree
+            elif likelihood_type == "classification":
+                pred = jax.nn.softmax(pred, axis=1)
+                pred = jax.lax.stop_gradient(pred)
+                D = jax.vmap(jnp.diag)(pred)
+                H = jnp.einsum("bo, bi->boi", pred, pred)
+                H = D - H
+                HJ_tree = jnp.einsum("boi, bi->bo", H, J_tree)
+            else:
+                raise ValueError(f"Likelihood {likelihood_type} not supported. Use either 'regression' or 'classification'.")
+            JtHJ_tree = model_on_data_vjp(HJ_tree)[0]
+            return jax.tree_map(lambda c, v: c + v, carry, JtHJ_tree), None
+        init_value = jax.tree_map(lambda x: jnp.zeros_like(x), params)
+        if batch_size>0:
+            N = data_array.shape[0]//batch_size
+            x = data_array[: N * batch_size].reshape((N, batch_size)+ data_array.shape[1:])
+        else:
+            x = data_array
+        return jax.lax.scan(scan_fun, init_value, x)[0]
+    _, unravel_func_p = jax.flatten_util.ravel_pytree(params)
 
-  def gvp(eps):
-    def scan_fun(carry, batch):
-      x_, y_ = batch
-      fn = lambda p: model_fn(p,x_[None,:])
-      # Linearise and use transpose
-      loss_fn_ = lambda preds: loss_fn(preds, y_)
-      out, Je = jax.jvp(fn, (params,), (eps,))
-      _, HJe = jax.jvp(jax.jacrev(loss_fn_, argnums=0), (out,), (Je,))
-      _, vjp_fn = jax.vjp(fn, params)
-      value = vjp_fn(HJe)[0]
-      return jax.tree_map(lambda c, v: c + v, carry, value), None
-    init_value = jax.tree_map(lambda x: jnp.zeros_like(x), params)
-    return jax.lax.scan(scan_fun, init_value, (x, y))[0]
-  p0_flat, unravel_func_p = jax.flatten_util.ravel_pytree(params)
-  def matvec(v_like_params):
-    p_unravelled = unravel_func_p(v_like_params)
-    ggn_vp = gvp(p_unravelled)
-    f_eval, _ = jax.flatten_util.ravel_pytree(ggn_vp)
-    return f_eval
-#   return jax.jit(matvec)
-  return matvec
+    def matvec(v_like_params):
+        p_unravelled = unravel_func_p(v_like_params)
+        ggn_vp = gvp(p_unravelled)
+        f_eval, _ = jax.flatten_util.ravel_pytree(ggn_vp)
+        return f_eval
+    return matvec
+    # return jax.jit(matvec)
+  elif sum_type == "parallel":
+    def gvp(eps):
+        @jax.vmap
+        def body_fn(batch):  
+            x_ = batch
+            if batch_size>0:
+                model_on_data = lambda p: model.apply(p,x_)
+            else:
+                model_on_data = lambda p: model.apply(p,x_[None,:])
+            # Linearise and use transpose
+            _, J_tree = jax.jvp(model_on_data, (params,), (eps,))
+            pred, model_on_data_vjp = jax.vjp(model_on_data, params)
+            if likelihood_type == "regression":
+                HJ_tree = J_tree
+            elif likelihood_type == "classification":
+                pred = jax.nn.softmax(pred, axis=1)
+                pred = jax.lax.stop_gradient(pred)
+                D = jax.vmap(jnp.diag)(pred)
+                H = jnp.einsum("bo, bi->boi", pred, pred)
+                H = D - H
+                HJ_tree = jnp.einsum("boi, bi->bo", H, J_tree)
+            else:
+                raise ValueError(f"Likelihood {likelihood_type} not supported. Use either 'regression' or 'classification'.")
+            JtHJ_tree = model_on_data_vjp(HJ_tree)[0]
+            return JtHJ_tree
+        if batch_size>0:
+            N = data_array.shape[0]//batch_size
+            x = data_array[: N * batch_size].reshape((N, batch_size)+ data_array.shape[1:])
+        else:
+            x = data_array
+        return jax.tree_map(lambda x: x.sum(axis=0), body_fn(x))
+    _, unravel_func_p = jax.flatten_util.ravel_pytree(params)
+    def matvec(v_like_params):
+        p_unravelled = unravel_func_p(v_like_params)
+        ggn_vp = gvp(p_unravelled)
+        f_eval, _ = jax.flatten_util.ravel_pytree(ggn_vp)
+        return f_eval
+    # return jax.jit(matvec)
+    return matvec
 
 def compute_num_params(pytree):
     return sum(x.size if hasattr(x, "size") else 0 for x in jax.tree_util.tree_leaves(pytree))
