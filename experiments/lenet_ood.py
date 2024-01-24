@@ -37,8 +37,8 @@ if __name__ == "__main__":
     eval_args["linearised_laplace"] = False
     eval_args["posterior_sample_type"] = "Pytree"
     eval_args["likelihood"] = "classification"
-    n_steps = 2
-    n_samples = 50
+    n_steps = 20
+    n_samples = 5
     alpha = 1.0
     rank = 1000
     n_params = compute_num_params(params)
@@ -57,4 +57,24 @@ if __name__ == "__main__":
                                                  1.0,
                                                  "non-kernel-eigvals")
     print(f"Lanczos diffusion (for a {n_params} parameter model with {n_steps - 1} steps, {n_samples} samples and {rank} iterations) took {time.time()-start_time:.5f} seconds")
-    breakpoint()
+
+    posterior_samples = lanczos_diffusion(model, 
+                                          params,
+                                          2,
+                                          n_samples,
+                                          alpha,
+                                          sample_key,
+                                          n_params,
+                                          rank,
+                                          x_train,
+                                          "classification",
+                                          1.0,
+                                          "full-ggn")
+    
+    posterior_dict = {
+        "Non-ker-eigvals": nonker_posterior_samples,
+        "full-samples": posterior_samples
+    }
+
+    save_path = "./checkpoints/MNIST/posterior_samples"
+    pickle.dump(posterior_dict, open(f"{save_path}_params.pickle", "wb"))
