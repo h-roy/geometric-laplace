@@ -101,7 +101,7 @@ def load_corrupted_cifar10(severity, data_path="data", batch_size=256, cuda=True
 
 def load_corrupted_cifar10_per_type(severity_level, corr_type, data_path="data", batch_size=256, cuda=True, workers=1, n_datapoint=None):
     if severity_level==0:
-        cifar10_val_test_set = CIFAR10(data_path, train=False, download=False)
+        cifar10_val_test_set = CIFAR10(data_path, train=False, download=True)
         cifar10_val_test_set = cifar10_val_test_set if n_datapoint is None else Subset(cifar10_val_test_set, range(n_datapoint))
         _, test_loader = val_test_split(cifar10_val_test_set, batch_size=batch_size, val_size=0)
         return test_loader

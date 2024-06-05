@@ -4,7 +4,7 @@ flake8
 python-dotenv
 debugpy
 pytest
-jax[cuda11_cudnn82] #jax[cpu]
+# jax[cuda11_cudnn82] #jax[cpu]
 tree-math
 matfree
 optax

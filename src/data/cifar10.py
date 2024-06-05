@@ -53,6 +53,7 @@ class CIFAR10(torch.utils.data.Dataset):
         img, target = self.data[index], self.targets[index]
         if self.transfrm is not None:
             img = self.transfrm(torch.from_numpy(img)).numpy()
+        img = np.moveaxis(img, 1, 2)
         return img, target
 
     def __len__(self):

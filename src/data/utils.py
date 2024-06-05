@@ -1,6 +1,14 @@
 import torch
 import numpy as np
 
+
+def numpy_collate_fn(batch):
+    data, target = zip(*batch)
+    data = np.stack(data)
+    target = np.stack(target)
+    return {"image": data, "label": target}
+
+
 def n_classes(dataset_name):
     if dataset_name == "CIFAR-100":
         return 100

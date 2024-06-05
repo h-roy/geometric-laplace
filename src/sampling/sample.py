@@ -91,7 +91,11 @@ if __name__ == "__main__":
                                                  1.0,
                                                  "non-kernel-eigvals")
     print(f"Lanczos diffusion (for a {n_params} parameter model with {n_steps - 1} steps, {n_samples} samples and {rank} iterations) took {time.time()-start_time:.5f} seconds")
-
+    
+    # posterior_dict = {
+    #     "Non-ker-eigvals": nonker_posterior_samples,
+    # }
+    
     posterior_samples = lanczos_diffusion(model, 
                                           params,
                                           2,

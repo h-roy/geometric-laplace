@@ -14,7 +14,7 @@ from src.training.maximum_a_posteriori import maximum_a_posteriori
 parser = argparse.ArgumentParser()
 # dataset hyperparams
 parser.add_argument("--dataset", type=str, choices=["MNIST", "FMNIST", "SVHN", "CIFAR-10", "CIFAR-100"], default="MNIST")
-parser.add_argument("--data_path", type=str, default="/work3/hroy/data/", help="root of dataset")
+parser.add_argument("--data_path", type=str, default="/dtu/p1/hroy/data/", help="root of dataset")
 parser.add_argument("--n_samples", default=None, type=int, help="Number of datapoint to use. None means all")
 parser.add_argument("--train_val_ratio", type=float, default=0.9)
 

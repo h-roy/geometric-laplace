@@ -5,7 +5,7 @@ import torch
 from jax import random
 import json
 import datetime
-from src.losses import mse_loss
+from src.losses import sse_loss
 from src.helper import calculate_exact_ggn
 from src.sampling.predictive_samplers import sample_predictive, sample_hessian_predictive
 from jax import numpy as jnp
@@ -31,14 +31,16 @@ if __name__ == "__main__":
     n_samples = 50
     alpha = 10.0
     rank = 7
-    nonker_posterior_samples = lanczos_diffusion(mse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "non-kernel-eigvals")
+    # nonker_posterior_samples = lanczos_diffusion(sse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "non-kernel-eigvals")
+    nonker_posterior_samples = lanczos_diffusion(model, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, "regression", 1.0, "non-kernel-eigvals")
     
 
     n_steps = 1000
     n_samples = 50
     rank = 10#200
     alpha = 10.0
-    ker_posterior_samples = lanczos_diffusion(mse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "kernel")
+    # ker_posterior_samples = lanczos_diffusion(sse_loss, model.apply, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, y_train, 1.0, "kernel")
+    ker_posterior_samples = lanczos_diffusion(model, params, n_steps, n_samples, alpha, sample_key, D, rank, x_train, "regression", 1.0, "kernel")
 
     # x_val = x_train
     ker_predictive = sample_predictive(ker_posterior_samples, params, model, x_val, False, "Pytree")

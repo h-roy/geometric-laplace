@@ -7,7 +7,7 @@ from typing import Callable, Literal
 def sample_predictive(
     posterior_samples,
     params,
-    model,
+    model_fn,
     x_test,
     linearised_laplace: bool = True,
     posterior_sample_type: Literal["Pytree", "List"] = "List",
@@ -17,14 +17,14 @@ def sample_predictive(
         predictive_samples = sample_linearised_predictive(
             posterior_samples=posterior_samples,
             params_map=params,
-            model_fn=model.apply,
+            model_fn=model_fn,
             x_test=x_test,
             posterior_sample_type=posterior_sample_type,
         )
     else:
         predictive_samples = sample_laplace(
             posterior_samples=posterior_samples,
-            model_fn=model.apply,
+            model_fn=model_fn,
             x_test=x_test,
             posterior_sample_type=posterior_sample_type,
         )

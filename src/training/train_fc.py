@@ -12,7 +12,7 @@ from jax import random, jit
 import pickle
 from src.models.fc import FC_NN
 from src.helper import compute_num_params
-from src.losses import mse_loss
+from src.losses import sse_loss
 
 def f(x):
     return jnp.sin(5 * x + 1) #+ jnp.cos(25 * x + 1) + jnp.exp(0.1 * x) + 5
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     y_train = f(x_train) + random.normal(noise_key, (N, input_dim)) * noise_std
     y_train = y_train[:, :output_dim]
 
+    # model = FC_NN(output_dim, 15)
     model = FC_NN(output_dim, 10, 2)
     params = model.init(model_key, x_train[:B])
     D = compute_num_params(params)
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         log_likelihood = (
             -N * O / 2 * jnp.log(2 * jnp.pi)
             + N * O / 2 * log_rho
-            - (N / B) * 0.5 * rho * jnp.sum(jax.vmap(mse_loss)(out, y))  # Sum over the observations
+            - (N / B) * 0.5 * rho * jnp.sum(jax.vmap(sse_loss)(out, y))  # Sum over the observations
         )
         log_prior = -D / 2 * jnp.log(2 * jnp.pi) + D / 2 * log_alpha - 0.5 * alpha * vparams @ vparams
         loss = log_likelihood + log_prior
